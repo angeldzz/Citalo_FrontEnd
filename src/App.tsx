@@ -2,26 +2,20 @@ import './App.css'
 import { Routes, Route } from 'react-router-dom'
 import Login from './pages/login.tsx'
 import Register from './pages/register.tsx'
-import AppRoutes from './components/Routes.tsx'
-import Header from './components/Header.tsx'
-import Footer from './components/Footer.tsx' 
+import Citalo from './pages/Citalo.tsx'
+import CalendarComponent from './components/Calendar.tsx'
+import Layout from './components/Layout.tsx'
 
 function App() {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <>
-            <Header />
-            <AppRoutes />
-            <Footer />
-          </>
-        }
-      />
-      <Route path="/register" element={ <Register />} />
-      <Route path="/login" element={<Login />} />
-    </Routes>
+    <div className="app">
+      <Routes>
+        <Route path="/" element={<Layout><Citalo /></Layout>} />
+        <Route path="/BetaCalendario" element={<Layout><CalendarComponent /></Layout>} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </div>
   )
 }
 

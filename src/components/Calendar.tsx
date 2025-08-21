@@ -1,95 +1,152 @@
-import { Calendar, momentLocalizer } from 'react-big-calendar'
-import moment from 'moment'
-import 'react-big-calendar/lib/css/react-big-calendar.css'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin from '@fullcalendar/interaction'
+import listPlugin from '@fullcalendar/list'
+import esLocale from '@fullcalendar/core/locales/es'
 import './Calendar.css'
 import { useState, useCallback } from 'react'
+import React from 'react'
 
-// Configurar moment en español
-moment.locale('es')
-const localizer = momentLocalizer(moment)
-
-// Datos de ejemplo para las citas
-const initialEvents = [
-  {
-    id: 1,
-    title: 'Cita con Dr. García',
-    start: new Date(2025, 7, 8, 10, 0), // 8 de agosto, 10:00 AM
-    end: new Date(2025, 7, 8, 11, 0),
-    resource: 'medicina-general'
+// Tipos de servicios generales
+const serviceTypes = [
+  { 
+    value: 'peluqueria-corte', 
+    label: 'Peluquería - Corte Caballero',
+    category: 'peluqueria',
+    duration: 60,
+    color: '#1e40af'
   },
-  {
-    id: 2,
-    title: 'Consulta Cardiología',
-    start: new Date(2025, 7, 10, 14, 30), // 10 de agosto, 2:30 PM
-    end: new Date(2025, 7, 10, 15, 30),
-    resource: 'cardiologia'
+  { 
+    value: 'peluqueria-tinte', 
+    label: 'Peluquería - Tinte/Color',
+    category: 'peluqueria',
+    duration: 120,
+    color: '#1d4ed8'
   },
-  {
-    id: 3,
-    title: 'Revisión Dental',
-    start: new Date(2025, 7, 12, 9, 0), // 12 de agosto, 9:00 AM
-    end: new Date(2025, 7, 12, 10, 0),
-    resource: 'odontologia'
+  { 
+    value: 'veterinario-revision', 
+    label: 'Veterinario - Revisión General',
+    category: 'veterinario',
+    duration: 60,
+    color: '#2563eb'
   },
-  {
-    id: 4,
-    title: 'Cita Dermatología',
-    start: new Date(2025, 7, 15, 16, 0), // 15 de agosto, 4:00 PM
-    end: new Date(2025, 7, 15, 17, 0),
-    resource: 'dermatologia'
+  { 
+    value: 'veterinario-vacunacion', 
+    label: 'Veterinario - Vacunación',
+    category: 'veterinario',
+    duration: 30,
+    color: '#3b82f6'
+  },
+  { 
+    value: 'consultoria-asesoria', 
+    label: 'Consultoría - Asesoría',
+    category: 'consultoria',
+    duration: 90,
+    color: '#60a5fa'
+  },
+  { 
+    value: 'fitness-entrenamiento', 
+    label: 'Fitness - Entrenamiento Personal',
+    category: 'fitness',
+    duration: 60,
+    color: '#93c5fd'
   }
 ]
 
-const messages = {
-  allDay: 'Todo el día',
-  previous: 'Anterior',
-  next: 'Siguiente',
-  today: 'Hoy',
-  month: 'Mes',
-  week: 'Semana',
-  day: 'Día',
-  agenda: 'Agenda',
-  date: 'Fecha',
-  time: 'Hora',
-  event: 'Cita',
-  noEventsInRange: 'No hay citas en este rango de fechas.',
-  showMore: (total: number) => `+ Ver más (${total})`
-}
+// Datos de ejemplo
+const initialEvents = [
+  {
+    id: '1',
+    title: 'Corte Caballero - Juan Pérez',
+    start: '2025-01-10T10:00:00',
+    end: '2025-01-10T11:00:00',
+    backgroundColor: '#1e40af',
+    extendedProps: {
+      serviceType: 'peluqueria-corte',
+      clientName: 'Juan Pérez',
+      email: 'juan@email.com',
+      phone: '123456789',
+      notes: 'Cliente preferido'
+    }
+  },
+  {
+    id: '2',
+    title: 'Revisión Veterinaria - Mascota Luna',
+    start: '2025-01-12T16:30:00',
+    end: '2025-01-12T17:30:00',
+    backgroundColor: '#2563eb',
+    extendedProps: {
+      serviceType: 'veterinario-revision',
+      clientName: 'María García',
+      email: 'maria@email.com',
+      phone: '987654321',
+      notes: 'Revisión anual de Luna (gato)'
+    }
+  }
+]
 
 // Función para validar horarios permitidos
-const isValidTimeSlot = (start: Date, end: Date): boolean => {
-  const startMoment = moment(start)
-  const endMoment = moment(end)
+const isValidTimeSlot = (start: Date): boolean => {
+  const dayOfWeek = start.getDay()
   
   // Verificar que sea de lunes a viernes (1-5)
-  const dayOfWeek = startMoment.day()
-  if (dayOfWeek === 0 || dayOfWeek === 6) { // 0 = domingo, 6 = sábado
-    return false                            
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    return false
   }
   
-  const startHour = startMoment.hour()
-  const startMinute = startMoment.minute()
-  const endHour = endMoment.hour()
-  const endMinute = endMoment.minute()
+  const hour = start.getHours()
   
-  // Convertir a minutos para facilitar la comparación
-  const startTimeMinutes = startHour * 60 + startMinute
-  const endTimeMinutes = endHour * 60 + endMinute
-  
-  // Horarios permitidos: 10:00-14:00 (600-840 min) y 16:00-20:00 (960-1200 min)
-  const morningStart = 10 * 60 // 10:00 = 600 min
-  const morningEnd = 14 * 60   // 14:00 = 840 min
-  const afternoonStart = 16 * 60 // 16:00 = 960 min
-  const afternoonEnd = 20 * 60   // 20:00 = 1200 min
-  
-  // La cita debe estar completamente dentro de uno de los horarios permitidos
-  const inMorningSlot = startTimeMinutes >= morningStart && endTimeMinutes <= morningEnd
-  const inAfternoonSlot = startTimeMinutes >= afternoonStart && endTimeMinutes <= afternoonEnd
-  
-  return inMorningSlot || inAfternoonSlot
+  // Horarios permitidos: 10:00-14:00 y 16:00-20:00
+  return (hour >= 10 && hour < 14) || (hour >= 16 && hour < 20)
 }
 
-// Componente Modal para agendar citas
+// Función para generar horarios disponibles basado en la fecha seleccionada
+const generateTimeSlots = (selectedDate: Date) => {
+  const slots = []
+  const now = new Date()
+  const isToday = selectedDate.toDateString() === now.toDateString()
+  const currentHour = now.getHours()
+  const currentMinute = now.getMinutes()
+  
+  // Horarios de mañana: 10:00 - 14:00
+  for (let hour = 10; hour < 14; hour++) {
+    // Agregar slot :00
+    if (!isToday || hour > currentHour || (hour === currentHour && currentMinute < 0)) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`)
+    }
+    // Agregar slot :30
+    if (!isToday || hour > currentHour || (hour === currentHour && currentMinute < 30)) {
+      slots.push(`${hour.toString().padStart(2, '0')}:30`)
+    }
+  }
+  
+  // Horarios de tarde: 16:00 - 20:00
+  for (let hour = 16; hour < 20; hour++) {
+    // Agregar slot :00
+    if (!isToday || hour > currentHour || (hour === currentHour && currentMinute < 0)) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`)
+    }
+    // Agregar slot :30
+    if (!isToday || hour > currentHour || (hour === currentHour && currentMinute < 30)) {
+      slots.push(`${hour.toString().padStart(2, '0')}:30`)
+    }
+  }
+  
+  return slots
+}
+
+// Función para verificar si una fecha es válida (no en el pasado)
+const isValidDate = (date: Date): boolean => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const selectedDate = new Date(date)
+  selectedDate.setHours(0, 0, 0, 0)
+  
+  return selectedDate >= today
+}
+
+// Componente Modal mejorado
 const AppointmentModal = ({ 
   isOpen, 
   onClose, 
@@ -102,144 +159,298 @@ const AppointmentModal = ({
   selectedSlot: { start: Date; end: Date } | null
 }) => {
   const [formData, setFormData] = useState({
-    title: '',
-    patientName: '',
+    clientName: '',
+    email: '',
     phone: '',
-    specialty: 'medicina-general',
+    serviceType: 'peluqueria-corte',
+    duration: 60,
+    selectedTime: '',
     notes: ''
   })
 
-  const specialties = [
-    { value: 'medicina-general', label: 'Medicina General' },
-    { value: 'cardiologia', label: 'Cardiología' },
-    { value: 'odontologia', label: 'Odontología' },
-    { value: 'dermatologia', label: 'Dermatología' }
-  ]
+  const [errors, setErrors] = useState<{[key: string]: string}>({})
+
+  // Generar slots disponibles cuando cambie la fecha seleccionada
+  const timeSlots = selectedSlot ? generateTimeSlots(selectedSlot.start) : []
+
+  // Establecer la primera hora disponible cuando se abra el modal
+  React.useEffect(() => {
+    if (isOpen && timeSlots.length > 0 && !formData.selectedTime) {
+      setFormData(prev => ({ ...prev, selectedTime: timeSlots[0] }))
+    }
+  }, [isOpen, timeSlots])
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {}
+    
+    if (!formData.clientName.trim()) {
+      newErrors.clientName = 'El nombre del cliente es obligatorio'
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'El correo electrónico es obligatorio'
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Por favor ingresa un correo válido'
+    }
+
+    if (!formData.selectedTime) {
+      newErrors.selectedTime = 'Debe seleccionar una hora'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleServiceTypeChange = (value: string) => {
+    const selectedService = serviceTypes.find(service => service.value === value)
+    setFormData({
+      ...formData,
+      serviceType: value,
+      duration: selectedService?.duration || 60
+    })
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedSlot) return
+    
+    if (!validateForm() || !selectedSlot) return
+
+    const selectedService = serviceTypes.find(service => service.value === formData.serviceType)
+    
+    // Crear la fecha con la hora seleccionada
+    const selectedDate = new Date(selectedSlot.start)
+    const [hours, minutes] = formData.selectedTime.split(':').map(Number)
+    selectedDate.setHours(hours, minutes, 0, 0)
+    
+    // Verificar que la fecha y hora no esté en el pasado
+    const now = new Date()
+    if (selectedDate <= now) {
+      alert('⚠️ No se puede agendar una cita en el pasado')
+      return
+    }
+    
+    const endTime = new Date(selectedDate.getTime() + formData.duration * 60000)
 
     const newAppointment = {
-      id: Date.now(),
-      title: `${formData.title} - ${formData.patientName}`,
-      start: selectedSlot.start,
-      end: selectedSlot.end,
-      resource: formData.specialty,
-      patientName: formData.patientName,
-      phone: formData.phone,
-      notes: formData.notes
+      id: Date.now().toString(),
+      title: `${selectedService?.label.split(' - ')[1]} - ${formData.clientName}`,
+      start: selectedDate.toISOString(),
+      end: endTime.toISOString(),
+      backgroundColor: selectedService?.color || '#2563eb',
+      extendedProps: {
+        serviceType: formData.serviceType,
+        clientName: formData.clientName,
+        email: formData.email,
+        phone: formData.phone,
+        notes: formData.notes
+      }
     }
 
     onSave(newAppointment)
-    setFormData({
-      title: '',
-      patientName: '',
-      phone: '',
-      specialty: 'medicina-general',
-      notes: ''
-    })
-    onClose()
+    handleClose()
   }
 
   const handleClose = () => {
     setFormData({
-      title: '',
-      patientName: '',
+      clientName: '',
+      email: '',
       phone: '',
-      specialty: 'medicina-general',
+      serviceType: 'peluqueria-corte',
+      duration: 60,
+      selectedTime: '',
       notes: ''
     })
+    setErrors({})
     onClose()
   }
 
   if (!isOpen || !selectedSlot) return null
 
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date)
+  }
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleClose()}>
+      <div className="modal-content" role="dialog" aria-labelledby="modal-title" aria-modal="true">
         <div className="modal-header">
-          <h3>Agendar Nueva Cita</h3>
-          <button className="modal-close" onClick={handleClose}>&times;</button>
+          <h3 id="modal-title">Agendar Nueva Cita</h3>
+          <button 
+            className="modal-close" 
+            onClick={handleClose}
+            aria-label="Cerrar modal"
+            type="button"
+          >
+            &times;
+          </button>
         </div>
         
         <div className="modal-body">
           <div className="appointment-time">
-            <strong>Fecha y hora:</strong> {moment(selectedSlot.start).format('dddd, D [de] MMMM [de] YYYY [a las] HH:mm')}
+            <strong>📅 Fecha seleccionada:</strong><br />
+            {formatDate(selectedSlot.start)}
           </div>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="title">Tipo de consulta *</label>
-              <input
-                type="text"
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Ej: Consulta general, Revisión, etc."
-                required
-              />
-            </div>
 
-            <div className="form-group">
-              <label htmlFor="patientName">Nombre del paciente *</label>
-              <input
-                type="text"
-                id="patientName"
-                value={formData.patientName}
-                onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                placeholder="Nombre completo"
-                required
-              />
+          {timeSlots.length === 0 ? (
+            <div className="no-slots-available">
+              <p>⚠️ No hay horarios disponibles para esta fecha.</p>
+              <p>Los horarios ya han pasado o no hay slots libres.</p>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate>
+              <div className="form-group">
+                <label htmlFor="selectedTime">
+                  Hora de la cita <span className="required">*</span>
+                </label>
+                <select
+                  id="selectedTime"
+                  value={formData.selectedTime}
+                  onChange={(e) => setFormData({ ...formData, selectedTime: e.target.value })}
+                  className={errors.selectedTime ? 'error' : ''}
+                  required
+                >
+                  <option value="">Selecciona una hora</option>
+                  {timeSlots.length > 0 && timeSlots.some(slot => parseInt(slot.split(':')[0]) < 14) && (
+                    <optgroup label="🌅 Horarios de Mañana (10:00 - 14:00)">
+                      {timeSlots.filter(slot => parseInt(slot.split(':')[0]) < 14).map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {timeSlots.length > 0 && timeSlots.some(slot => parseInt(slot.split(':')[0]) >= 16) && (
+                    <optgroup label="🌆 Horarios de Tarde (16:00 - 20:00)">
+                      {timeSlots.filter(slot => parseInt(slot.split(':')[0]) >= 16).map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+                {errors.selectedTime && (
+                  <span className="error-message" role="alert">
+                    {errors.selectedTime}
+                  </span>
+                )}
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="phone">Teléfono</label>
-              <input
-                type="tel"
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Número de contacto"
-              />
-            </div>
+              <div className="form-group">
+                <label htmlFor="clientName">
+                  Nombre del cliente <span className="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="clientName"
+                  value={formData.clientName}
+                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                  placeholder="Nombre completo del cliente"
+                  className={errors.clientName ? 'error' : ''}
+                  aria-describedby={errors.clientName ? 'clientName-error' : undefined}
+                  required
+                />
+                {errors.clientName && (
+                  <span id="clientName-error" className="error-message" role="alert">
+                    {errors.clientName}
+                  </span>
+                )}
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="specialty">Especialidad *</label>
-              <select
-                id="specialty"
-                value={formData.specialty}
-                onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                required
-              >
-                {specialties.map((spec) => (
-                  <option key={spec.value} value={spec.value}>
-                    {spec.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="form-group">
+                <label htmlFor="email">
+                  Correo electrónico <span className="required">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="cliente@email.com"
+                  className={errors.email ? 'error' : ''}
+                  aria-describedby={errors.email ? 'email-error' : undefined}
+                  required
+                />
+                {errors.email && (
+                  <span id="email-error" className="error-message" role="alert">
+                    {errors.email}
+                  </span>
+                )}
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="notes">Notas adicionales</label>
-              <textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Información adicional sobre la cita"
-                rows={3}
-              />
-            </div>
+              <div className="form-group">
+                <label htmlFor="phone">Teléfono</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="Número de contacto"
+                />
+              </div>
 
-            <div className="modal-actions">
-              <button type="button" onClick={handleClose} className="btn-cancel">
-                Cancelar
-              </button>
-              <button type="submit" className="btn-save">
-                Agendar Cita
-              </button>
-            </div>
-          </form>
+              <div className="form-group">
+                <label htmlFor="serviceType">
+                  Tipo de servicio <span className="required">*</span>
+                </label>
+                <select
+                  id="serviceType"
+                  value={formData.serviceType}
+                  onChange={(e) => handleServiceTypeChange(e.target.value)}
+                  required
+                >
+                  {serviceTypes.map((service) => (
+                    <option key={service.value} value={service.value}>
+                      {service.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="duration">Duración (minutos)</label>
+                <select
+                  id="duration"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                >
+                  <option value={30}>30 minutos</option>
+                  <option value={60}>1 hora</option>
+                  <option value={90}>1 hora 30 min</option>
+                  <option value={120}>2 horas</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="notes">Notas adicionales</label>
+                <textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Información adicional sobre la cita (opcional)"
+                  rows={3}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" onClick={handleClose} className="btn-cancel">
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-save"
+                  disabled={timeSlots.length === 0}
+                >
+                  Agendar Cita
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>
@@ -248,158 +459,115 @@ const AppointmentModal = ({
 
 export default function CalendarComponent() {
   const [events, setEvents] = useState(initialEvents)
-  const [view, setView] = useState<'month' | 'week' | 'work_week' | 'day' | 'agenda'>('month')
-  const [date, setDate] = useState(new Date())
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | null>(null)
 
-  const handleSelectSlot = useCallback(
-    ({ start, end }: { start: Date; end: Date }) => {
-      // Validar que el horario esté permitido
-      if (!isValidTimeSlot(start, end)) {
-        alert('Las citas solo se pueden agendar de lunes a viernes:\n• De 10:00 a 14:00\n• De 16:00 a 20:00')
-        return
-      }
-      
-      setSelectedSlot({ start, end })
-      setModalOpen(true)
-    },
-    []
-  )
+  // Función para manejar clics en días con validación de fecha
+  const handleDateClick = useCallback((dateInfo: any) => {
+    const clickedDate = new Date(dateInfo.date)
+    const dayOfWeek = clickedDate.getDay()
+    
+    // Verificar que no sea fin de semana
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      alert('⚠️ Las citas solo se pueden agendar de lunes a viernes')
+      return
+    }
+    
+    // Verificar que no sea una fecha pasada
+    if (!isValidDate(clickedDate)) {
+      alert('⚠️ No se pueden agendar citas en fechas pasadas')
+      return
+    }
+    
+    // Establecer el día seleccionado
+    const start = new Date(clickedDate)
+    const end = new Date(clickedDate)
+    
+    setSelectedSlot({ start, end })
+    setModalOpen(true)
+  }, [])
 
-  const handleSaveAppointment = (newAppointment: any) => {
-    setEvents([...events, newAppointment])
-  }
+  const handleEventClick = useCallback((clickInfo: any) => {
+    const event = clickInfo.event
+    const details = `
+📋 Servicio: ${serviceTypes.find(s => s.value === event.extendedProps.serviceType)?.label}
+👤 Cliente: ${event.extendedProps.clientName}
+📧 Email: ${event.extendedProps.email}
+📞 Teléfono: ${event.extendedProps.phone || 'No proporcionado'}
+📝 Notas: ${event.extendedProps.notes || 'Sin notas'}
+    `.trim()
 
-  const handleSelectEvent = useCallback((event: any) => {
-    const action = window.confirm(`¿Deseas eliminar la cita: "${event.title}"?`)
+    const action = window.confirm(`${details}\n\n¿Deseas eliminar esta cita?`)
     if (action) {
       setEvents(events.filter(e => e.id !== event.id))
     }
   }, [events])
 
-  const eventStyleGetter = (event: any) => {
-    let backgroundColor = '#2563eb'
-    
-    switch (event.resource) {
-      case 'medicina-general':
-        backgroundColor = '#059669'
-        break
-      case 'cardiologia':
-        backgroundColor = '#dc2626'
-        break
-      case 'odontologia':
-        backgroundColor = '#3b82f6'
-        break
-      case 'dermatologia':
-        backgroundColor = '#7c3aed'
-        break
-      default:
-        backgroundColor = '#2563eb'
-    }
-
-    return {
-      style: {
-        backgroundColor,
-        borderRadius: '8px',
-        opacity: 0.9,
-        color: 'white',
-        border: 'none',
-        display: 'block',
-        fontSize: '13px',
-        fontWeight: '500',
-        padding: '4px 8px'
-      }
-    }
+  const handleSaveAppointment = (newAppointment: any) => {
+    setEvents([...events, newAppointment])
   }
-
-  // Función para deshabilitar días y horarios no permitidos
-  const slotPropGetter = useCallback((date: Date) => {
-    const dayOfWeek = moment(date).day()
-    const hour = moment(date).hour()
-    
-    // Deshabilitar fines de semana
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return {
-        style: {
-          backgroundColor: '#f3f4f6',
-          color: '#9ca3af',
-          cursor: 'not-allowed'
-        }
-      }
-    }
-    
-    // Deshabilitar horarios no permitidos (fuera de 10-14 y 16-20)
-    if (hour < 10 || (hour >= 14 && hour < 16) || hour >= 20) {
-      return {
-        style: {
-          backgroundColor: '#f9fafb',
-          color: '#d1d5db',
-          cursor: 'not-allowed'
-        }
-      }
-    }
-    
-    return {}
-  }, [])
 
   return (
     <div className="calendar-container">
       <div className="calendar-header">
-        <h2>Calendario de Citas</h2>
-        <p>Haz clic en un horario vacío para crear una nueva cita o en una cita existente para eliminarla</p>
+        <h1>📅 Sistema de Citas</h1>
+        <p>Gestiona tus citas de forma fácil y eficiente</p>
         <div className="schedule-info">
-          <strong>Horarios disponibles:</strong> Lunes a Viernes de 10:00 a 14:00 y de 16:00 a 20:00
+          <strong>🕒 Horarios disponibles:</strong> Lunes a Viernes de 10:00 a 14:00 y de 16:00 a 20:00
+        </div>
+        <div className="instruction-info">
+          <em>💡 Haz clic en cualquier día del mes para agendar una cita</em>
         </div>
       </div>
       
       <div className="calendar-legend">
-        <div className="legend-item">
-          <span className="legend-color medicina-general"></span>
-          <span>Medicina General</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color cardiologia"></span>
-          <span>Cardiología</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color odontologia"></span>
-          <span>Odontología</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color dermatologia"></span>
-          <span>Dermatología</span>
+        <h3>Tipos de Servicios</h3>
+        <div className="legend-grid">
+          {serviceTypes.map((service) => (
+            <div key={service.value} className="legend-item">
+              <span 
+                className="legend-color" 
+                style={{ backgroundColor: service.color }}
+              ></span>
+              <span>{service.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="calendar-wrapper">
-        <Calendar
-          localizer={localizer}
+        <FullCalendar
+          plugins={[dayGridPlugin, interactionPlugin, listPlugin]}
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listWeek'
+          }}
+          buttonText={{
+            today: 'Hoy',
+            month: 'Mes',
+            list: 'Lista'
+          }}
+          locale={esLocale}
+          initialView='dayGridMonth'
+          editable={false}
+          selectable={false}
+          dayMaxEvents={3}
+          weekends={true}
           events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: 600 }}
-          onSelectEvent={handleSelectEvent}
-          onSelectSlot={handleSelectSlot}
-          selectable
-          popup
-          views={['month', 'week', 'day', 'agenda']}
-          view={view}
-          onView={(newView) => setView(newView)}
-          date={date}
-          onNavigate={(newDate) => setDate(newDate)}
-          messages={messages}
-          eventPropGetter={eventStyleGetter}
-          slotPropGetter={slotPropGetter}
-          min={new Date(2025, 7, 7, 8, 0)} // Hora mínima mostrada: 8:00 AM
-          max={new Date(2025, 7, 7, 22, 0)} // Hora máxima mostrada: 10:00 PM
-          dayPropGetter={(date) => ({
-            style: {
-              backgroundColor: moment(date).isSame(moment(), 'day') 
-                ? 'rgba(37, 99, 235, 0.1)' 
-                : 'transparent'
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          height="auto"
+          eventDisplay="block"
+          dayHeaderFormat={{ weekday: 'long' }}
+          moreLinkText="más citas"
+          dayCellClassNames={(dateInfo) => {
+            const dayOfWeek = dateInfo.date.getDay()
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+              return ['fc-weekend-disabled']
             }
-          })}
+            return []
+          }}
         />
       </div>
 

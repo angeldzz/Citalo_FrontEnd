@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './Header.css'
 
 export default function Header() {
@@ -6,30 +7,30 @@ export default function Header() {
       <div className="container">
         {/* Navegación izquierda */}
         <nav className="nav">
-          <a href="/" className="logo">
+          <Link to="/" className="logo">
             Citalo
-          </a>
+          </Link>
           <div className="navLinks">
-            <a href="/pagina-1" className="navLink">
-              Página 1
-            </a>
-            <a href="/pagina-2" className="navLink">
+            <Link to="/BetaCalendario" className="navLink">
+              Calendario
+            </Link>
+            <Link to="/pagina-2" className="navLink">
               Página 2
-            </a>
-            <a href="/pagina-3" className="navLink">
+            </Link>
+            <Link to="/pagina-3" className="navLink">
               Página 3
-            </a>
+            </Link>
           </div>
         </nav>
 
         {/* Botones de autenticación derecha */}
         <div className="authButtons">
-          <a href="/login" className="loginButton">
+          <Link to="/login" className="loginButton">
             Iniciar Sesión
-          </a>
-          <a href="/register" className="registerButton">
+          </Link>
+          <Link to="/register" className="registerButton">
             Registrarse
-          </a>
+          </Link>
         </div>
       </div>
     </header>
