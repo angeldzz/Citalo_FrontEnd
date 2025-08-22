@@ -86,19 +86,19 @@ const initialEvents = [
 ]
 
 // Función para validar horarios permitidos
-const isValidTimeSlot = (start: Date): boolean => {
-  const dayOfWeek = start.getDay()
+// const isValidTimeSlot = (start: Date): boolean => {
+//   const dayOfWeek = start.getDay()
   
-  // Verificar que sea de lunes a viernes (1-5)
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    return false
-  }
+//   // Verificar que sea de lunes a viernes (1-5)
+//   if (dayOfWeek === 0 || dayOfWeek === 6) {
+//     return false
+//   }
   
-  const hour = start.getHours()
+//   const hour = start.getHours()
   
-  // Horarios permitidos: 10:00-14:00 y 16:00-20:00
-  return (hour >= 10 && hour < 14) || (hour >= 16 && hour < 20)
-}
+//   // Horarios permitidos: 10:00-14:00 y 16:00-20:00
+//   return (hour >= 10 && hour < 14) || (hour >= 16 && hour < 20)
+// }
 
 // Función para generar horarios disponibles basado en la fecha seleccionada
 const generateTimeSlots = (selectedDate: Date) => {
