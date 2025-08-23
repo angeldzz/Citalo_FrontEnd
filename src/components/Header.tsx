@@ -14,11 +14,11 @@ export default function Header() {
             <Link to="/BetaCalendario" className="navLink">
               Calendario
             </Link>
-            <Link to="/pagina-2" className="navLink">
-              Página 2
+            <Link to="/nosotros" className="navLink">
+              Nosotros
             </Link>
-            <Link to="/pagina-3" className="navLink">
-              Página 3
+            <Link to="/contacto" className="navLink">
+              Contacto
             </Link>
           </div>
         </nav>
