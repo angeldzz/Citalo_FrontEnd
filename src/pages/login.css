@@ -106,7 +106,8 @@ body{margin:0;background: radial-gradient(1200px 800px at 20% 10%, #0a1540 0%, t
 .check{display:flex; align-items:center; gap:8px; color:#b9d7ff; font-size:13px}
 .check input{accent-color:#22d3ee}
 
-.link{color:#7dd3fc; text-decoration:none; font-size:13px}
+.link{color:#7dd3fc; text-decoration:none; font-weight:600}
+
 .link:hover{text-decoration:underline}
 
 .btn{
@@ -119,6 +120,23 @@ body{margin:0;background: radial-gradient(1200px 800px at 20% 10%, #0a1540 0%, t
 .btn:hover{filter: saturate(110%); box-shadow: 0 14px 40px -10px #22d3eebb}
 .btn:active{transform: translateY(1px)}
 .btn:disabled{opacity:.6; cursor:not-allowed}
+
+.error-message {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
 
 /* Responsive tweaks */
 @media (max-width:420px){

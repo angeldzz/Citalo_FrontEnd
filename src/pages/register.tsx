@@ -2,17 +2,37 @@ import './register.css';
 import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
+interface RegisterFormData {
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string;
+  password: string;
+  password_confirm: string;
+  tipo_usuario: string;
+  telefono: string;
+}
+
+interface ApiError {
+  message?: string;
+  [key: string]: any;
+}
+
 export default function Register() {
-  const [formData, setFormData] = useState({
-    nombre: '',
-    apellidos: '',
+  const [formData, setFormData] = useState<RegisterFormData>({
+    first_name: '',
+    last_name: '',
+    username: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    password_confirm: '',
+    tipo_usuario: 'cliente',
+    telefono: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   const passwordStrength = useMemo(() => {
@@ -36,29 +56,105 @@ export default function Register() {
     return { level: 4, text: 'Excelente', color: '#22d3ee' };
   }, [formData.password]);
 
-  const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (field: keyof RegisterFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
+    // Limpiar error del campo cuando el usuario comienza a escribir
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.first_name.trim()) {
+      newErrors.first_name = 'El nombre es requerido';
+    }
+
+    if (!formData.last_name.trim()) {
+      newErrors.last_name = 'Los apellidos son requeridos';
+    }
+
+    if (!formData.username.trim()) {
+      newErrors.username = 'El nombre de usuario es requerido';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'El nombre de usuario debe tener al menos 3 caracteres';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'El email es requerido';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'El email no es válido';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'La contraseña es requerida';
+    } else if (passwordStrength.level < 2) {
+      newErrors.password = 'La contraseña es muy débil';
+    }
+
+    if (formData.password !== formData.password_confirm) {
+      newErrors.password_confirm = 'Las contraseñas no coinciden';
+    }
+
+    if (!formData.telefono.trim()) {
+      newErrors.telefono = 'El teléfono es requerido';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.password !== formData.confirmPassword) {
-      alert('Las contraseñas no coinciden');
-      return;
-    }
-    
-    if (passwordStrength.level < 2) {
-      alert('La contraseña es muy débil');
+    if (!validateForm()) {
       return;
     }
     
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    console.log(formData);
-    alert('Registro exitoso');
-    navigate('/login');
+    setErrors({});
+
+    try {
+      const response = await fetch('http://localhost:8000/api/usuarios/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('¡Registro exitoso! Ya puedes iniciar sesión.');
+        navigate('/login');
+      } else {
+        // Manejar errores de validación del backend
+        if (data.username) {
+          setErrors(prev => ({ ...prev, username: data.username[0] }));
+        }
+        if (data.email) {
+          setErrors(prev => ({ ...prev, email: data.email[0] }));
+        }
+        if (data.password) {
+          setErrors(prev => ({ ...prev, password: data.password[0] }));
+        }
+        if (data.non_field_errors) {
+          setErrors(prev => ({ ...prev, general: data.non_field_errors[0] }));
+        }
+        
+        // Si hay un mensaje general de error
+        if (data.message || data.detail) {
+          setErrors(prev => ({ ...prev, general: data.message || data.detail }));
+        }
+      }
+    } catch (error) {
+      console.error('Error al registrar usuario:', error);
+      setErrors({ general: 'Error de conexión. Por favor, intenta nuevamente.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,8 +167,14 @@ export default function Register() {
         </h1>
         <p className="subtitle">Únete a la plataforma</p>
 
+        {errors.general && (
+          <div className="error-message" style={{ marginBottom: '16px', textAlign: 'center' }}>
+            {errors.general}
+          </div>
+        )}
+
         <div className="field">
-          <label htmlFor="nombre">Nombre</label>
+          <label htmlFor="first_name">Nombre</label>
           <div className="input-wrap">
             <span className="icon" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -81,18 +183,19 @@ export default function Register() {
               </svg>
             </span>
             <input
-              id="nombre"
+              id="first_name"
               type="text"
               placeholder="Tu nombre"
-              value={formData.nombre}
-              onChange={handleChange('nombre')}
+              value={formData.first_name}
+              onChange={handleChange('first_name')}
               required
             />
           </div>
+          {errors.first_name && <div className="error-message">{errors.first_name}</div>}
         </div>
 
         <div className="field">
-          <label htmlFor="apellidos">Apellidos</label>
+          <label htmlFor="last_name">Apellidos</label>
           <div className="input-wrap">
             <span className="icon" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -100,14 +203,35 @@ export default function Register() {
               </svg>
             </span>
             <input
-              id="apellidos"
+              id="last_name"
               type="text"
               placeholder="Tus apellidos"
-              value={formData.apellidos}
-              onChange={handleChange('apellidos')}
+              value={formData.last_name}
+              onChange={handleChange('last_name')}
               required
             />
           </div>
+          {errors.last_name && <div className="error-message">{errors.last_name}</div>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="username">Nombre de usuario</label>
+          <div className="input-wrap">
+            <span className="icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke="currentColor" opacity=".6"/>
+              </svg>
+            </span>
+            <input
+              id="username"
+              type="text"
+              placeholder="nombreusuario"
+              value={formData.username}
+              onChange={handleChange('username')}
+              required
+            />
+          </div>
+          {errors.username && <div className="error-message">{errors.username}</div>}
         </div>
 
         <div className="field">
@@ -127,6 +251,59 @@ export default function Register() {
               onChange={handleChange('email')}
               required
             />
+          </div>
+          {errors.email && <div className="error-message">{errors.email}</div>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="telefono">Teléfono</label>
+          <div className="input-wrap">
+            <span className="icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke="currentColor" opacity=".6"/>
+              </svg>
+            </span>
+            <input
+              id="telefono"
+              type="tel"
+              placeholder="+34 600 000 000"
+              value={formData.telefono}
+              onChange={handleChange('telefono')}
+              required
+            />
+          </div>
+          {errors.telefono && <div className="error-message">{errors.telefono}</div>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="tipo_usuario">Tipo de usuario</label>
+          <div className="input-wrap">
+            <span className="icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" opacity=".6"/>
+                <circle cx="9" cy="7" r="4" stroke="currentColor" opacity=".6"/>
+                <path d="m22 11-3-3 3-3" stroke="currentColor"/>
+                <path d="m19 8 3 3-3 3" stroke="currentColor"/>
+              </svg>
+            </span>
+            <select
+              id="tipo_usuario"
+              value={formData.tipo_usuario}
+              onChange={handleChange('tipo_usuario')}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 0,
+                outline: 0,
+                color: 'var(--text)',
+                fontSize: '14px',
+                padding: '2px'
+              }}
+              required
+            >
+              <option value="cliente">Cliente</option>
+              <option value="negocio">Propietario de Negocio</option>
+            </select>
           </div>
         </div>
 
@@ -183,10 +360,11 @@ export default function Register() {
               </span>
             </div>
           )}
+          {errors.password && <div className="error-message">{errors.password}</div>}
         </div>
 
         <div className="field">
-          <label htmlFor="confirmPassword">Confirmar contraseña</label>
+          <label htmlFor="password_confirm">Confirmar contraseña</label>
           <div className="input-wrap">
             <span className="icon" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -196,11 +374,11 @@ export default function Register() {
               </svg>
             </span>
             <input
-              id="confirmPassword"
+              id="password_confirm"
               type={showConfirmPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={handleChange('confirmPassword')}
+              value={formData.password_confirm}
+              onChange={handleChange('password_confirm')}
               required
             />
             <button
@@ -223,12 +401,10 @@ export default function Register() {
               )}
             </button>
           </div>
-          {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-            <div className="error-message">Las contraseñas no coinciden</div>
-          )}
+          {errors.password_confirm && <div className="error-message">{errors.password_confirm}</div>}
         </div>
 
-        <button className="btn" type="submit" onClick={() => window.open('/')} disabled={loading}>
+        <button className="btn" type="submit" disabled={loading}>
           {loading ? 'Registrando…' : 'Registrar'}
         </button>
 
